@@ -1,6 +1,6 @@
 # California Mobile Retrospective
 
-<it>Libby H. Koolik, Álvaro Alvarado, Amy Budahn, Laurel Plummer, Julian D. Marshall, and Joshua S. Apte</it>
+<i>Libby H. Koolik, Álvaro Alvarado, Amy Budahn, Laurel Plummer, Julian D. Marshall, and Joshua S. Apte</i>
 
 This Github repository contains the Python code for the paper titled "PM<sub>2.5</sub> exposure disparities persist despite strict vehicle emissions controls in California", currently in review at Science Advances. For more information on the analysis, including methodological details, please see the paper: [link](https://chemrxiv.org/engage/chemrxiv/article-details/6584780166c1381729bcf0b0).
 
