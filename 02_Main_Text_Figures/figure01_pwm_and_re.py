@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-@author: libbykoolik
+PM2.5 exposure disparities persist despite strict vehicle emissions controls in California
+Koolik et al. (2024)
+
+Figure 1
+
 """
 
 # Import libraries
@@ -12,9 +16,6 @@ import seaborn as sns
 import numpy as np
 
 #%% Define Critical User Paths Up Front
-# Where to output files:
-out_dir = '/Users/libbykoolik/Documents/Research/OEHHA Project/Retrospective Analysis/Figures/final_manuscript_figures/figure_01'
-
 # File path for the summarized PWM and Relative Disparity by Race-Ethnicity
 re_pwm_fp = '/Users/libbykoolik/Documents/Research/OEHHA Project/Retrospective Analysis/Figures/emfac2021/all_statewide/disparities_all.csv'
 
