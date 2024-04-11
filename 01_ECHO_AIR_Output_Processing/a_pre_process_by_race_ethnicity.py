@@ -22,6 +22,9 @@ from os import path
 # Folder containing exposure shapefiles 
 main_data_path = '/Users/libbykoolik/Documents/Research/OEHHA Project/Retrospective Analysis/Final_Scripts/data_to_upload'
 
+# Folder to save the generated CSV files
+out_path = '/Users/libbykoolik/Documents/Research/OEHHA Project/Retrospective Analysis/Final_Scripts/processed_data'
+
 #%% Global definitions
 # Define the vehicle types run through ECHO-AIR
 vehicle_types = ['all','ldv','mdv','hdv']
@@ -84,12 +87,12 @@ for vt in vehicle_types: # Loop through each vehicle type
 # Create one big dataframe
 pwm_by_year = pd.concat(pwms, ignore_index=True).reset_index(drop=True)
 
-# Melt this dataframe to calculate disparities
-pwm_by_year = pd.melt(pwm_by_year, id_vars=['YEAR','SOURCE','TOTAL'], var_name='GROUP',
-                      value_name='PWM') 
+# Rename the TOTAL and HISLA columns for clarity
+pwm_by_year.rename(columns={'TOTAL':'TOTAL_PWM', 'HISLA':'HISPANIC'}, inplace=True)
 
-# Rename the TOTAL column for clarity
-pwm_by_year.rename(columns={'TOTAL':'TOTAL_PWM'}, inplace=True)
+# Melt this dataframe to calculate disparities
+pwm_by_year = pd.melt(pwm_by_year, id_vars=['YEAR','SOURCE','TOTAL_PWM'], var_name='GROUP',
+                      value_name='PWM') 
 
 #%% Need to calculate the "OTHER" source
 # Create a copy of the dataframe by grabbing the LDV rows
@@ -127,3 +130,6 @@ disparities['ABSOLUTE_DISP'] = disparities['TOTAL_PWM'] - disparities['PWM']
 
 # Calculate relative disparity
 disparities['RELATIVE_DISP'] = disparities['ABSOLUTE_DISP'] / disparities['TOTAL_PWM']
+
+#%% Output the disparities dataframe to a CSV
+disparities.to_csv(path.join(out_path, 'disparities_by_race_ethnicity.csv'), index=False)
