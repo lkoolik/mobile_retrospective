@@ -125,7 +125,7 @@ other_total_pwm['TOTAL_PWM'] = other_total_pwm.apply(lambda x: calc_oth(x['YEAR'
 # Merge together
 other_pwms = pd.merge(other_pwms[['YEAR','SOURCE','GROUP','PWM']], other_total_pwm[['YEAR','TOTAL_PWM']], on='YEAR')
 other_pwms = other_pwms[['YEAR','SOURCE','TOTAL_PWM','GROUP','PWM']].copy()
-#%%
+
 # Combine this dataframe with the pwm_by_year
 pwm_by_year = pd.concat([pwm_by_year, other_pwms], ignore_index=True).reset_index(drop=True)
 
