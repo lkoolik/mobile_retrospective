@@ -94,7 +94,7 @@ pwm_by_year.rename(columns={'TOTAL':'TOTAL_PWM', 'HISLA':'HISPANIC'}, inplace=Tr
 pwm_by_year = pd.melt(pwm_by_year, id_vars=['YEAR','SOURCE','TOTAL_PWM'], var_name='GROUP',
                       value_name='PWM') 
 
-#%% Need to calculate the "OTHER" source
+#% Need to calculate the "OTHER" source
 # Create a copy of the dataframe by grabbing the LDV rows
 other_pwms = pwm_by_year[pwm_by_year['SOURCE']=='LDV'][['YEAR','SOURCE','TOTAL_PWM','GROUP']].copy()
 
@@ -102,22 +102,30 @@ other_pwms = pwm_by_year[pwm_by_year['SOURCE']=='LDV'][['YEAR','SOURCE','TOTAL_P
 other_pwms['SOURCE'] = 'OTH'
 
 # Write a simple helper function
-def calc_oth(year, group, pwm_by_year=pwm_by_year):
+def calc_oth(year, group, field='PWM', pwm_by_year=pwm_by_year):
     ''' Helper function that estimates the impacts from all other vehicles '''
     # Trim the dataframe to the corresponding year and group
     tmp = pwm_by_year[(pwm_by_year['YEAR']==year)&(pwm_by_year['GROUP']==group)].copy()
     
     # Get the result for the full fleet
-    all_pwm = tmp.loc[tmp['SOURCE']=='ALL','PWM'].sum()
+    all_pwm = tmp.loc[tmp['SOURCE']=='ALL',field].sum()
     
     # Substract the result from LDV, MDV, and HDV from the full fleet PWM
-    oth_pwm = all_pwm - tmp.loc[tmp['SOURCE']!='ALL','PWM'].sum()
+    oth_pwm = all_pwm - tmp.loc[tmp['SOURCE']!='ALL',field].sum()
 
     return oth_pwm
 
 # Apply this function on the new oth_pwms dataframe
 other_pwms['PWM'] = other_pwms.apply(lambda x: calc_oth(x['YEAR'], x['GROUP']), axis=1)
 
+# Need to update the TOTAL PWM for the OTH group
+other_total_pwm = other_pwms[['YEAR']].drop_duplicates().copy()
+other_total_pwm['TOTAL_PWM'] = other_total_pwm.apply(lambda x: calc_oth(x['YEAR'], 'WHITE', field='TOTAL_PWM'), axis=1)
+
+# Merge together
+other_pwms = pd.merge(other_pwms[['YEAR','SOURCE','GROUP','PWM']], other_total_pwm[['YEAR','TOTAL_PWM']], on='YEAR')
+other_pwms = other_pwms[['YEAR','SOURCE','TOTAL_PWM','GROUP','PWM']].copy()
+#%%
 # Combine this dataframe with the pwm_by_year
 pwm_by_year = pd.concat([pwm_by_year, other_pwms], ignore_index=True).reset_index(drop=True)
 
@@ -126,7 +134,7 @@ pwm_by_year = pd.concat([pwm_by_year, other_pwms], ignore_index=True).reset_inde
 disparities = pwm_by_year.copy()
 
 # Calculate absolute disparity
-disparities['ABSOLUTE_DISP'] = disparities['TOTAL_PWM'] - disparities['PWM']
+disparities['ABSOLUTE_DISP'] = disparities['PWM'] - disparities['TOTAL_PWM']
 
 # Calculate relative disparity
 disparities['RELATIVE_DISP'] = disparities['ABSOLUTE_DISP'] / disparities['TOTAL_PWM']
