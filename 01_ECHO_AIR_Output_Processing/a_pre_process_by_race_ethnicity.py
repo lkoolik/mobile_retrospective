@@ -4,19 +4,20 @@
 PM2.5 exposure disparities persist despite strict vehicle emissions controls in California
 Koolik et al. (2024)
 
-Figure 3
+Data Processing Scripts
+
+A: Process Data by Race and Ethnicity
+
+In this script, we summarize the population-weighted mean exposure concentration and
+exposure disparity for each racial-ethnic group for each vehicle type. 
 
 """
 
 # Import libraries
-import pandas as pd
-import geopandas as gpd
-import matplotlib.pyplot as plt
-import seaborn as sns
-sns.set_theme(context=None, font_scale=1, rc=None, style='ticks')
-from cmcrameri import cm
-import numpy as np
-from os import path
+import pandas as pd # v1.4.2
+import geopandas as gpd # v0.10.2
+import numpy as np  # v1.22.3
+from os import path 
 
 #%% Define Critical User Paths Up Front
 # Folder containing exposure shapefiles 
