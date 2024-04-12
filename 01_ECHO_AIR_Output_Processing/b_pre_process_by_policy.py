@@ -9,7 +9,11 @@ Data Processing Scripts
 B: Process Data by Policy Designation
 
 In this script, we summarize the population-weighted mean exposure concentration and
-exposure disparity for AB617 and SB535 community residents for each vehicle type. 
+exposure disparity from each vehicle type for each year for 
+    - AB617 community residents in aggregate
+    - SB535 community residents in aggregate
+    - Ab617 community residents by community
+    - Regional boundaries defined in Koolik et al. (2024)
 
 """
 
@@ -23,9 +27,10 @@ from os import path
 # Folder containing exposure shapefiles 
 main_data_path = '/Users/libbykoolik/Documents/Research/OEHHA Project/Retrospective Analysis/Final_Scripts/data_to_upload'
 
-# Paths to necessary policy boundaries
+# Paths to necessary political boundaries
 ab617_fp = '/Users/libbykoolik/Documents/Research/OEHHA Project/data/CAPP Communities (dl 2023-09-01)/AB617_Shapes_Edited/ab617_communities.shp'
 sb535_fp = '/Users/libbykoolik/Documents/Research/OEHHA Project/data/AB617 and SB535 from Lucas (dl 2023-06-14)/SB535_TRACTS/SB635_tracts_gdf.shp'
+counties_fp = '/Users/libbykoolik/Documents/Research/OEHHA Project/scripts/echo-air/data/counties.feather'
 
 # Path to raw population data (can be downloaded from the ECHO-AIR materials)
 pop_fp = '/Users/libbykoolik/Documents/Research/OEHHA Project/scripts/isrm_health_calculations/data/ca2010.feather'
@@ -44,11 +49,12 @@ policy_groups = ['TOTAL', 'AB617', 'SB535']
 years = range(2000,2020)
 
 #%% Load the political boundary files and the population data and do some minor processing
-# Read both boundary files
+# Read the boundary files
 ab617 = gpd.read_file(ab617_fp)
 sb535 = gpd.read_file(sb535_fp)
+counties = gpd.read_feather(counties_fp)
 
-# Update the naming on the SB535 files for consistency with AB617
+# Make a few cosmetic updates to these dataframes
 sb535 = sb535[['ApproxLoc','geometry']].copy()
 sb535.rename(columns={'ApproxLoc':'Name'}, inplace=True)
 
@@ -60,7 +66,32 @@ pop_geo = pop[['POP_ID','geometry']].drop_duplicates() # extract geo data
 pop = pop.groupby(['POP_ID','YEAR'])[['TOTAL']].sum().reset_index() # sum across age bins
 pop = gpd.GeoDataFrame(pd.merge(pop, pop_geo, on='POP_ID')) # merge for one smaller dataframe
 
-#%% Project all three to match the CRS of the exposure data
+#%% We are more interested in regional results than county-specific results
+# Create a dictionary to map counties to regions
+county_mapper = {'ALAMEDA':'SF', 'ALPINE':'NA', 'AMADOR':'NA', 'BUTTE':'CV', 
+                 'CALAVERAS':'NA', 'COLUSA':'CV', 'CONTRA COSTA':'SF', 'DEL NORTE':'NA', 
+                 'EL DORADO':'NA', 'FRESNO':'CV', 'GLENN':'CV', 'HUMBOLDT':'NA', 'IMPERIAL':'NA', 
+                 'INYO':'NA', 'KERN':'CV', 'KINGS':'CV', 'LAKE':'NA', 'LASSEN':'NA', 'LOS ANGELES':'LA', 
+                 'MADERA':'CV', 'MARIN':'SF', 'MARIPOSA':'NA', 'MENDOCINO':'NA', 'MERCED':'CV', 
+                 'MODOC':'NA', 'MONO':'NA', 'MONTEREY':'NA', 'NAPA':'SF', 'NEVADA':'NA', 'ORANGE':'LA',
+                 'PLACER':'NA', 'PLUMAS':'NA', 'RIVERSIDE':'LA', 'SACRAMENTO':'CV', 'SAN BENITO':'NA',
+                 'SAN BERNARDINO':'LA', 'SAN DIEGO':'NA', 'SAN FRANCISCO':'SF', 'SAN JOAQUIN':'CV',
+                 'SAN LUIS OBISPO':'NA', 'SAN MATEO':'SF', 'SANTA BARBARA':'NA', 'SANTA CLARA':'SF',
+                 'SANTA CRUZ':'NA', 'SHASTA':'CV', 'SIERRA':'NA', 'SISKIYOU':'NA', 
+                 'SOLANO':'SF', 
+                 'SONOMA':'SF','STANISLAUS':'CV', 'SUTTER':'CV', 'TEHAMA':'CV', 'TRINITY':'NA', 
+                 'TULARE':'CV', 'TUOLUMNE':'NA', 'VENTURA':'LA', 'YOLO':'CV', 'YUBA':'CV'}
+
+# Map this to the counties dataframe
+counties['REGION'] = counties['NAME'].map(county_mapper)
+
+# Remove the 'NA' values
+# counties = counties[counties['REGION'].isin(['SF','CV','LA'])].copy()
+
+# Dissolve counties to get a regional dataframe
+regions = counties[['REGION','geometry']].dissolve(by='REGION').reset_index()
+
+#%% Project all boundary files to match the CRS of the exposure data
 # Load one file briefly to get the CRS
 crs_to_use = gpd.read_file(path.join(main_data_path,
                                      'all_cy2000_exposure_concentrations.shp')).crs
@@ -69,6 +100,7 @@ crs_to_use = gpd.read_file(path.join(main_data_path,
 pop = pop.to_crs(crs_to_use)
 ab617 = ab617.to_crs(crs_to_use)
 sb535 = sb535.to_crs(crs_to_use)
+regions = regions.to_crs(crs_to_use)
 
 #%% There are a few problems with the underlying geometries that need to be resolved
 # Write a helper function to remove multipolygons
@@ -97,6 +129,7 @@ def remove_multis(data, name, id_col, cols):
 # Run on each dataset
 ab617 = remove_multis(ab617, 'AB617', 'code', ['code','Community'])
 sb535 = remove_multis(sb535, 'SB535', 'Name', ['Name'])
+regions = remove_multis(regions, 'REGION', 'REGION', ['REGION'])
 
 # Buffer the population data to help with donut holes
 pop['geometry'] = pop.buffer(0)
@@ -177,15 +210,17 @@ def intersect_data(data, boundary, intrinsic_vars, extrinsic_vars, name='', how=
     return intersect
 
 #%% Create intersections between population and EJ boundaries
-# Run this function on the AB617 and SB535 boundaries
+# Run this function on the boundary files
 # These new objects are not aggregated at the community level, providing a high 
 # level of granularity for future calculations
 ab617_pop = intersect_data(pop, ab617, [], ['TOTAL'], name='AB617', how='union')
 sb535_pop = intersect_data(pop, sb535, [], ['TOTAL'], name='SB535', how='union')
+region_pop = intersect_data(pop, regions, [], ['TOTAL'], name='REGION', how='intersection')
 
 # Do a quick clean-up on boundaries to remove donut holes again
 ab617_pop['geometry'] = ab617_pop.buffer(0)
 sb535_pop['geometry'] = sb535_pop.buffer(0)
+region_pop['geometry'] = region_pop.buffer(0)
 
 #%% Create a crosswalk for Concentration-Population-EJ Designation
 # Note that the ISRM ID for each year is preserved, so we only need to intersect 
@@ -213,23 +248,90 @@ tmp = gpd.read_file(path.join(main_data_path,
                                      'all_cy2000_exposure_concentrations.shp'))
 tmp = tmp[['ISRM_ID','geometry']].copy()
 
-# Run on AB617-Population and SB535-Population objects
+# Run on AB617-Population, SB535-Population, and County-Population objects
 ab617_pop_isrm = get_crosswalk(ab617_pop, tmp, 'AB617')
 sb535_pop_isrm = get_crosswalk(sb535_pop, tmp, 'SB535')
+region_pop_isrm = get_crosswalk(region_pop, tmp, 'REGION')
 
-#%% Create a function for loading exposure data and combining with these crosswalks
-#   Then, run for each year and source for both AB617 and SB535
-def process_c20xx(year, source, ej_pop_isrm, main_data_path=main_data_path):
+#%% Make a few quick updates to columns for simplifying later functions
+# Rename the AB617 columns
+ab617_pop_isrm.rename(columns={'code':'CODE', 'Community':'NAME'}, inplace=True)
+
+# Make the region dataframe match the AB617 dataframe structure
+region_pop_isrm['NAME'] = region_pop_isrm['REGION'].map({'CV':'Central Valley',
+                                                         'LA':'Los Angeles Area',
+                                                         'SF':'San Francisco Bay Area'})
+region_pop_isrm.rename(columns={'REGION':'CODE'}, inplace=True)
+
+# Save these as a crosswalks dictionary
+crosswalks = {'AB617':ab617_pop_isrm,
+              'SB535':sb535_pop_isrm,
+              'REGION':region_pop_isrm}
+
+#%% Create a functions for loading exposure data, combining with these crosswalks,
+#   and calculating population-weighted mean exposure concentrations
+def get_pwm(data, pop_col):
+    '''Estimates the population-weighted mean exposure from a data set
+        INPUTS:
+            - data = dataframe containing population counts and concentration
+            - pop_col = column name for population counts
+            
+        OUTPUTS:
+            - pwm = the population-weighted mean concentration '''
+            
+    # Estimate the PWM
+    pwm = (data['PM25_UG_M3']*data[pop_col]).sum() / (data[pop_col].sum())
+    
+    return pwm
+
+# As part of this pre-processing, we should also get community-specific PWMs 
+# for each year and source for AB617
+def get_detailed_pwms(year, source, ej_pop_c20xx):
+    ''' Estimates the population-weighted mean exposure for each year for each source
+        for each AB617 community or each region
+        INPUTS:
+            - year = year corresponding to modeled data
+            - source = vehicle type group name corresponding to modeled data
+            - ej_pop_c20xx = geodataframe containing the intersection between the 
+              boundary, the population data, and the concentration
+            
+        OUTPUTS:
+            - detailed_pwms = a dataframe containing the year, the source, 
+              and the population-weighted mean concentration for each AB617 
+              community or each region''' 
+              
+    # Create a dataframe of community names
+    detailed_pwms = ej_pop_c20xx[['NAME','CODE']].drop_duplicates().copy().reset_index(drop=True)
+    
+    # Add details to the dataframe
+    detailed_pwms['YEAR'] = year
+    detailed_pwms['SOURCE'] = source.upper()
+    
+    # Call the PWM function for each community
+    detailed_pwm_tmp = {}
+    for code in detailed_pwms['CODE'].unique():
+        tmp = ej_pop_c20xx[ej_pop_c20xx['CODE']==code].copy()
+        detailed_pwm_tmp[code] = get_pwm(tmp, 'TOTAL')
+        
+    # Add this dictionary as a column
+    detailed_pwms['PWM'] = detailed_pwms['CODE'].map(detailed_pwm_tmp)
+    
+    # Clean up
+    detailed_pwms = detailed_pwms[['YEAR','SOURCE','NAME','CODE','PWM']]
+    
+    return detailed_pwms
+
+def process_c20xx(year, source, crosswalks=crosswalks, main_data_path=main_data_path):
     ''' Estimates the population-weighted mean exposure for each year for each source
         INPUTS:
             - year = year corresponding to modeled data
             - source = vehicle type group name corresponding to modeled data
-            - ej_pop_isrm = geodataframe containing the intersection between the 
-              EJ boundary, the population data, and the ISRM ID
+            - crosswalks = a dictionary containing each of the crosswalks between
+              political boundaries, population, and ISRM grid cell
             - main_data_path = filepath where all ECHO-AIR outputs are stored
             
         OUTPUTS:
-            - pwm_list = a list containing the year, the source, the population-
+            - pwms = a list or dataframe containing the year, the source, the population-
               weighted mean concentration for the EJ group, and the total 
               statewide population-weighted mean concentration '''
     
@@ -238,110 +340,96 @@ def process_c20xx(year, source, ej_pop_isrm, main_data_path=main_data_path):
                                     '{}_cy{}_exposure_concentrations.shp'.format(source,year)))
     
     # Estimate the statewide PWM
-    total_pwm = (c20xx['TOTAL']*c20xx['PM25_UG_M3']).sum() / (c20xx['TOTAL'].sum())
+    total_pwm = get_pwm(c20xx, 'TOTAL')
     
     # Remove unnecessary columns
     c20xx = c20xx[['ISRM_ID','PM25_UG_M3']].copy()
     
-    # Merge with the crosswalk
-    ej_pop_c20xx = pd.merge(ej_pop_isrm, c20xx, on='ISRM_ID')
+    # Merge with each crosswalk
+    ab617_pop_c20xx = pd.merge(crosswalks['AB617'], c20xx, on='ISRM_ID')
+    sb535_pop_c20xx = pd.merge(crosswalks['SB535'], c20xx, on='ISRM_ID')
+    region_pop_c20xx = pd.merge(crosswalks['REGION'], c20xx, on='ISRM_ID')
     
-    # Calculate the PWM
-    pwm = (ej_pop_c20xx['TOTAL']*ej_pop_c20xx['PM25_UG_M3']).sum()/(ej_pop_c20xx['TOTAL'].sum())
+    # Calculate the PWM for AB617 and SB535
+    ab617_pwm = get_pwm(ab617_pop_c20xx, 'TOTAL')
+    sb535_pwm = get_pwm(sb535_pop_c20xx, 'TOTAL')
     
-    # Create a list so it's easy to turn into a dataframe later
-    pwm_list = [year, source, pwm, total_pwm]
+    # Combine these into a dataframe
+    ej_pwms = pd.DataFrame([[year, source.upper(), 'TOTAL', 'TOTAL', total_pwm],
+                            [year, source.upper(), 'AB617', 'AB617', ab617_pwm],
+                            [year, source.upper(), 'SB535', 'SB535', sb535_pwm]],
+                           columns = ['YEAR','SOURCE','NAME','CODE','PWM'])
     
-    return pwm_list
+    # Calculate the PWM for each AB617 community
+    community_pwms = get_detailed_pwms(year, source, ab617_pop_c20xx)
+    
+    # Calculate the PWM for each region
+    regional_pwms = get_detailed_pwms(year, source, region_pop_c20xx)
+    
+    # Combine all three dataframes
+    pwms = pd.concat([ej_pwms, community_pwms, regional_pwms], 
+                     ignore_index=True).reset_index(drop=True)
+    
+    return pwms
 
-# Create lists for storing data
-ab617_pwms = []
-sb535_pwms = []
+#%% Process all of the data
+# Create list for storing data
+pwms = []
 
 # Iterate through each vehicle type and year to get the PWMs
 for vt in vehicle_types: # Loop through each vehicle type
     for year in years: # Loop through each year
-        ab617_pwms.append(process_c20xx(year, vt, ab617_pop_isrm))
-        sb535_pwms.append(process_c20xx(year, vt, sb535_pop_isrm))
+        pwms.append(process_c20xx(year, vt))
         
 #%% Compile all of this data together
-# Turn each list into a dataframe
-ab617_pwms = pd.DataFrame(ab617_pwms, 
-                          columns=['YEAR','SOURCE','PWM','TOTAL_PWM']).reset_index(drop=True)
-sb535_pwms = pd.DataFrame(sb535_pwms, 
-                          columns=['YEAR','SOURCE','PWM','TOTAL_PWM']).reset_index(drop=True)
+# Turn this list into a dataframe
+pwms_by_year = pd.concat(pwms).reset_index(drop=True)
 
-# Merge these dataframes together
-ej_pwms = pd.merge(ab617_pwms, sb535_pwms, on=['YEAR','SOURCE'],
-                   suffixes = ("_AB617", "_SB535"))
+# Save a lookup for the NAME-CODE combinations
+lookup = pwms_by_year[['NAME','CODE']].drop_duplicates().copy()
+lookup = dict(zip(lookup['CODE'], lookup['NAME']))
 
-# Confirm that the totals are equivalent
-assert ((ej_pwms['TOTAL_PWM_AB617'] / ej_pwms['TOTAL_PWM_SB535']).sum() == ej_pwms.shape[0])
+# Pivot this data to estimate the contribution from all other sources
+pwms_pivot = pwms_by_year[['YEAR','SOURCE','CODE','PWM']].pivot(columns=['SOURCE'],
+                                                                index=['YEAR','CODE'], 
+                                                                values='PWM').reset_index()
+pwms_pivot['OTH'] = pwms_pivot['ALL'] - pwms_pivot['LDV'] - pwms_pivot['MDV'] - pwms_pivot['HDV']
 
-# Clean up this dataframe 
-ej_pwms.rename(columns={'TOTAL_PWM_AB617':'TOTAL_PWM', 
-                        'PWM_AB617':'AB617',
-                        'PWM_SB535':'SB535'}, inplace=True)
-ej_pwms = ej_pwms[['YEAR','SOURCE','TOTAL_PWM','AB617', 'SB535']].copy()
-ej_pwms['SOURCE'] = ej_pwms['SOURCE'].str.upper()
+#%% Restructure for a useful output file
+# Melt the data to the longest format possible
+pwms_df = pwms_pivot.melt(id_vars=['YEAR','CODE'], var_name='SOURCE', value_name='PWM').reset_index(drop=True)
 
-#%% Need to calculate the "OTHER" source
-# Create a copy of the dataframe by grabbing the LDV rows
-other_pwms = ej_pwms[ej_pwms['SOURCE']=='LDV'][['YEAR','SOURCE','TOTAL_PWM','AB617','SB535']].copy()
+# Extract the totals column
+pwms_total = pwms_df[pwms_df['CODE']=='TOTAL'].copy()
+pwms_df = pwms_df[pwms_df['CODE']!='TOTAL'].copy()
 
-# Update the source name
-other_pwms['SOURCE'] = 'OTH'
+# Merge the totals back in
+pwms_df = pd.merge(pwms_df, pwms_total[['YEAR','SOURCE','PWM']], 
+                   on=['YEAR','SOURCE'], suffixes=('','_TOTAL'))
 
-# Write a simple helper function
-def calc_oth(year, group, ej_pwms=ej_pwms):
-    ''' Helper function that estimates the impacts from all other vehicles
-        INPUTS:
-            - year = year corresponding to modeled data
-            - group = group of interest
-            - ej_pwms = dataframe containing the population-weighted mean c
-              concentrations for each EJ group
-            
-        OUTPUTS:
-            - oth_pwm = population-weighted mean exposure concentration from all
-              other vehicles for the group '''
-    
-    # Trim the dataframe to the corresponding year 
-    tmp = ej_pwms[(ej_pwms['YEAR']==year)].copy()
-    
-    # Get the result for the full fleet
-    all_pwm = tmp.loc[tmp['SOURCE']=='ALL',group].sum()
-    
-    # Substract the result from LDV, MDV, and HDV from the full fleet PWM
-    oth_pwm = all_pwm - tmp.loc[tmp['SOURCE']!='ALL',group].sum()
+# Add the community names back in
+pwms_df['NAME'] = pwms_df['CODE'].map(lookup)
 
-    return oth_pwm
-
-# Apply this function on the new oth_pwms dataframe
-other_pwms['AB617'] = other_pwms.apply(lambda x: calc_oth(x['YEAR'], 'AB617'), axis=1)
-other_pwms['SB535'] = other_pwms.apply(lambda x: calc_oth(x['YEAR'], 'SB535'), axis=1)
-
-# Need to update the TOTAL PWM for the OTH group
-other_total_pwm = other_pwms[['YEAR']].drop_duplicates().copy()
-other_total_pwm['TOTAL_PWM'] = other_total_pwm.apply(lambda x: calc_oth(x['YEAR'], 'TOTAL_PWM'), axis=1)
-
-# Merge together
-other_pwms = pd.merge(other_pwms[['YEAR','SOURCE','AB617','SB535']], other_total_pwm[['YEAR','TOTAL_PWM']], on='YEAR')
-other_pwms = other_pwms[['YEAR','SOURCE','TOTAL_PWM','AB617','SB535']].copy()
-
-# Combine this dataframe with the pwm_by_year
-ej_pwms = pd.concat([ej_pwms, other_pwms], ignore_index=True).reset_index(drop=True)
+# Remove the extra region and clean up slightly
+pwms_df = pwms_df[pwms_df['CODE'] != 'NA'].copy().reset_index(drop=True)
+pwms_df = pwms_df[['YEAR','SOURCE','CODE','NAME','PWM_TOTAL','PWM']].copy()
 
 #%% Calculate the disparity
 # Copy the dataframe for a new object
-disparities = ej_pwms.copy()
+disparities = pwms_df.copy()
 
 # Calculate absolute disparity for each EJ group
-disparities['AB617_ABSOLUTE_DISP'] = disparities['AB617'] - disparities['TOTAL_PWM']
-disparities['SB535_ABSOLUTE_DISP'] = disparities['SB535'] - disparities['TOTAL_PWM']
+disparities['ABSOLUTE_DISP'] = disparities['PWM'] - disparities['PWM_TOTAL']
 
 # Calculate relative disparity
-disparities['AB617_RELATIVE_DISP'] = disparities['AB617_ABSOLUTE_DISP'] / disparities['TOTAL_PWM']
-disparities['SB535_RELATIVE_DISP'] = disparities['SB535_ABSOLUTE_DISP'] / disparities['TOTAL_PWM']
+disparities['RELATIVE_DISP'] = disparities['ABSOLUTE_DISP'] / disparities['PWM_TOTAL']
 
 #%% Output the disparities dataframe to a CSV
+# Update to match the format of the racial-ethnic dataset
+disparities.rename(columns={'PWM_TOTAL':'TOTAL_PWM',
+                            'NAME':'GROUP'}, inplace=True)
+disparities = disparities[['YEAR','SOURCE','TOTAL_PWM','CODE','GROUP','PWM',
+                           'ABSOLUTE_DISP','RELATIVE_DISP']].copy()
+
+# Export
 disparities.to_csv(path.join(out_path, 'disparities_by_policy.csv'), index=False)
