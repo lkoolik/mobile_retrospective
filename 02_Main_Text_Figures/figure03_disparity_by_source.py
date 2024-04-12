@@ -103,16 +103,16 @@ ax1 = plt.subplot(gs[1]) # b) Fractional disparity by source
 ax2 = plt.subplot(gs[2]) # c) Relative disparity by source
 
 # # # # # # # # # # # # 
-# Panels (A) and (B)  #
+# Panels (a) and (b)  #
 # # # # # # # # # # # #
 # Plot panels A and B using the function defined above
 make_stackplot(years, hispanic_pwm, ax0, normalize=False)
 make_stackplot(years, hispanic_pwm, ax1, normalize=True)
 
 # # # # # # # # # # # #
-# Panel (C)           #
+# Panel (c)           #
 # # # # # # # # # # # #
-# Plot panel C more manually
+# Plot the relative disparity as lines
 sns.lineplot(data=hispanic_pwm[hispanic_pwm['SOURCE']!='ALL'], x='YEAR', 
               y='RELATIVE_DISP', hue='SOURCE', palette=vt_colors, legend=False,
               marker='o', ax=ax2)
