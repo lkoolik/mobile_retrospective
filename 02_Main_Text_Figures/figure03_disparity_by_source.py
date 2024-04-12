@@ -9,14 +9,13 @@ Figure 3
 """
 
 # Import libraries
-import pandas as pd
-import geopandas as gpd
-import matplotlib.pyplot as plt
-from matplotlib import gridspec
-import seaborn as sns
+import pandas as pd # v1.4.2
+import matplotlib.pyplot as plt # v3.5.1
+from matplotlib import gridspec 
+import seaborn as sns # v0.11.2
 sns.set_theme(context=None, font_scale=1, rc=None, style='ticks')
-from cmcrameri import cm
-import numpy as np
+from cmcrameri import cm # v1.7
+import numpy as np # v1.22.3
 from os import path
 
 #%% Define Critical User Paths Up Front
@@ -49,7 +48,16 @@ hispanic_pwm = hispanic_pwm[['YEAR','SOURCE','ABSOLUTE_DISP','RELATIVE_DISP']].c
 
 #%% Create a function for automating plotting the first two panels slightly
 def make_stackplot(years, pwm_data, ax, normalize=False, vt_color_list=vt_color_list):
-    ''' '''
+    ''' Function for plotting absolute disparity by vehicle type scatcked
+        INPUTS:
+            - years = array of relevant years of study
+            - pwm_data = dataframe containing absolute disparity by group
+              by source
+            - ax = axis object to plot on
+            - normalize = Boolean of whether or not to normalize by total 
+              absolute disparity
+            - vt_color_list = list of vehicle type colors '''
+            
     # Create the vectors for each vehicle type
     oth = np.array(pwm_data.loc[pwm_data['SOURCE']=='OTH']['ABSOLUTE_DISP'])
     mdv = np.array(pwm_data.loc[pwm_data['SOURCE']=='MDV']['ABSOLUTE_DISP'])

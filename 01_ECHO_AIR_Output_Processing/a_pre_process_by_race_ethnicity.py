@@ -38,7 +38,14 @@ years = range(2000,2020)
 
 #%% Create functions to expedite processing
 def estimate_total_pwm(c20xx, group):
-    ''' Returns the total population-weighted mean exposure for a group for an exposure year '''
+    ''' Returns the total population-weighted mean exposure for a group for an exposure year
+        INPUTS:
+            - c20xx = dataframe containing PM2.5 concentrations and population counts
+            - group = group of interest
+            
+        OUTPUTS:
+            - pwm = population-weighted mean exposure concentration for the group '''
+            
     # Create a copy of the dataframe
     c20xx = c20xx.copy()
     
@@ -48,7 +55,17 @@ def estimate_total_pwm(c20xx, group):
     return pwm
 
 def process_c20xx(year, source, demo_groups=demo_groups, main_data_path=main_data_path):
-    ''' Runs functions for a year of exposure data '''
+    ''' Imports and calculates the population-weighted mean exposure for a given year
+        of data from a specific source
+        INPUTS:
+            - year = year corresponding to modeled data
+            - source = vehicle type group name corresponding to modeled data
+            - demo_groups = list of demographic groups of interest
+            - main_data_path = filepath where all ECHO-AIR outputs are stored
+            
+        OUTPUTS:
+            - pwm_dataframe = dataframe containingpopulation-weighted mean exposure 
+              concentrations for each group '''
     
     # Load the data
     c20xx = gpd.read_file(path.join(main_data_path,
@@ -104,7 +121,17 @@ other_pwms['SOURCE'] = 'OTH'
 
 # Write a simple helper function
 def calc_oth(year, group, field='PWM', pwm_by_year=pwm_by_year):
-    ''' Helper function that estimates the impacts from all other vehicles '''
+    ''' Helper function that estimates the impacts from all other vehicles
+        INPUTS:
+            - year = year corresponding to modeled data
+            - group = group of interest
+            - field = the column of data being calculated
+            - pwm_by_year = dataframe containing all of the modeled concentrations
+            
+        OUTPUTS:
+            - oth_pwm = population-weighted mean exposure concentration from all
+              other vehicles for the group '''
+              
     # Trim the dataframe to the corresponding year and group
     tmp = pwm_by_year[(pwm_by_year['YEAR']==year)&(pwm_by_year['GROUP']==group)].copy()
     

@@ -9,11 +9,11 @@ Figure 1
 """
 
 # Import libraries
-import pandas as pd
-import matplotlib.pyplot as plt
-from cmcrameri import cm
-import seaborn as sns
-import numpy as np
+import pandas as pd # v1.4.2
+import matplotlib.pyplot as plt # v3.5.1
+from cmcrameri import cm # v1.7
+import seaborn as sns # v0.11.2
+import numpy as np # v1.22.3
 
 #%% Define Critical User Paths Up Front
 # File path for the summarized PWM and Relative Disparity by Race-Ethnicity

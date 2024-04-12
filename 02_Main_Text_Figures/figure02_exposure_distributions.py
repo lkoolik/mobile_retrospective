@@ -9,14 +9,14 @@ Figure 2
 """
 
 # Import libraries
-import pandas as pd
-import geopandas as gpd
-import matplotlib.pyplot as plt
-from matplotlib import gridspec
-import seaborn as sns
+import pandas as pd # v1.4.2
+import geopandas as gpd # v0.10.2
+import matplotlib.pyplot as plt # v3.5.1
+from matplotlib import gridspec 
+import seaborn as sns # v0.11.2
 sns.set_theme(context=None, font_scale=1, rc=None, style='ticks')
-from cmcrameri import cm
-import numpy as np
+from cmcrameri import cm # v1.7
+import numpy as np # v1.22.3
 
 #%% Define Critical User Paths Up Front
 # File path for the shapefile containing exposure to all vehicles for calendar year 2000

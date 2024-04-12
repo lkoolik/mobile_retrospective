@@ -73,7 +73,16 @@ sb535 = sb535.to_crs(crs_to_use)
 #%% There are a few problems with the underlying geometries that need to be resolved
 # Write a helper function to remove multipolygons
 def remove_multis(data, name, id_col, cols):
-    ''' Removes the multipolygons from a geodataframe '''
+    ''' Removes the multipolygons from a geodataframe
+        INPUTS:
+            - data = geodataframe containing multipolygons
+            - name = string used to assign a unique ID to new polygons
+            - id_col = column containing former ID 
+            - cols = columns to keep in the new geodataframe
+            
+        OUTPUTS:
+            - data = updated, simplified geodataframe  '''
+            
     # Get rid of multipolygons
     data = data.explode(index_parts=True).reset_index(drop=True).reset_index()
     
@@ -96,14 +105,19 @@ pop['geometry'] = pop.buffer(0)
 def intersect_data(data, boundary, intrinsic_vars, extrinsic_vars, name='', how='union'):
     ''' Function for intersecting data and boundary and allocating the variables 
          INPUTS:
-             - data: the dataset that has variables that are being apportioned
-             - boundary: the dataset that has boundaries but no variables 
+             - data = the dataset that has variables that are being apportioned
+             - boundary = the dataset that has boundaries but no variables 
                to be apportioned
-             - intrinsic_vars: the names of the columns that are intrinsic 
+             - intrinsic_vars = the names of the columns that are intrinsic 
                (e.g., concentration)
-             - extrinsic_vars: the names of the columns that are extrinsic 
+             - extrinsic_vars = the names of the columns that are extrinsic 
                (e.g., population)
-             - name: the name to assign the filter column (e.g., AB617)'''
+             - name = the name to assign the filter column (e.g., AB617)
+             - how = method for combining geospatial information
+         
+            OUTPUTS:
+             - intersect: a geodataframe that contains smaller polygons representing 
+               the intersection of the data and the boundary '''
     
     # Create a copy of each dataset
     data_copy = data.copy(deep=True)
@@ -177,7 +191,17 @@ sb535_pop['geometry'] = sb535_pop.buffer(0)
 # Note that the ISRM ID for each year is preserved, so we only need to intersect 
 # the population-EJ boundary files with the ISRM grid once
 def get_crosswalk(ej_pop, c20xx, filter_name):
-    ''' '''
+    ''' Creates a geospatial intersection between the EJ boundary, population data,
+        and ISRM geography
+        INPUTS:
+            - ej_pop = geodataframe containing the intersection between the EJ
+              boundary and the population data
+            - c20xx = geodataframe containing concentration at the ISRM grid cell
+            
+        OUTPUTS:
+            - ej_pop_isrm = geodataframe containing the intersection between the 
+              EJ boundary, the population data, and the ISRM ID '''
+            
     # Perform an intersection between these objects
     ej_pop_isrm = intersect_data(ej_pop[ej_pop['FILTER']==filter_name].copy(), 
                                  c20xx, [], ['TOTAL'], how='intersection')
@@ -196,7 +220,18 @@ sb535_pop_isrm = get_crosswalk(sb535_pop, tmp, 'SB535')
 #%% Create a function for loading exposure data and combining with these crosswalks
 #   Then, run for each year and source for both AB617 and SB535
 def process_c20xx(year, source, ej_pop_isrm, main_data_path=main_data_path):
-    ''' Runs functions for a year of exposure data from a source'''
+    ''' Estimates the population-weighted mean exposure for each year for each source
+        INPUTS:
+            - year = year corresponding to modeled data
+            - source = vehicle type group name corresponding to modeled data
+            - ej_pop_isrm = geodataframe containing the intersection between the 
+              EJ boundary, the population data, and the ISRM ID
+            - main_data_path = filepath where all ECHO-AIR outputs are stored
+            
+        OUTPUTS:
+            - pwm_list = a list containing the year, the source, the population-
+              weighted mean concentration for the EJ group, and the total 
+              statewide population-weighted mean concentration '''
     
     # Load the data
     c20xx = gpd.read_file(path.join(main_data_path,
@@ -259,7 +294,16 @@ other_pwms['SOURCE'] = 'OTH'
 
 # Write a simple helper function
 def calc_oth(year, group, ej_pwms=ej_pwms):
-    ''' Helper function that estimates the impacts from all other vehicles '''
+    ''' Helper function that estimates the impacts from all other vehicles
+        INPUTS:
+            - year = year corresponding to modeled data
+            - group = group of interest
+            - ej_pwms = dataframe containing the population-weighted mean c
+              concentrations for each EJ group
+            
+        OUTPUTS:
+            - oth_pwm = population-weighted mean exposure concentration from all
+              other vehicles for the group '''
     
     # Trim the dataframe to the corresponding year 
     tmp = ej_pwms[(ej_pwms['YEAR']==year)].copy()
