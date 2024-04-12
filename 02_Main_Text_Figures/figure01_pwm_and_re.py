@@ -52,19 +52,24 @@ policy_pwms = pd.read_csv(policy_pwm_fp)
 re_pwms = re_pwms[re_pwms['SOURCE']=='ALL'].copy()
 policy_pwms = policy_pwms[policy_pwms['SOURCE']=='ALL'].copy()
 
+# Grab the total PWM
+total_pwm = policy_pwms[['YEAR','TOTAL_PWM']].drop_duplicates().copy().reset_index(drop=True)
+
 # Cut to just relevant columns
-policy_pwms = policy_pwms[['YEAR','TOTAL_PWM','AB617', 'SB535']].copy()
+policy_pwms = policy_pwms[['YEAR','TOTAL_PWM','GROUP', 'PWM']].copy()
 re_pwms = re_pwms[['YEAR','GROUP','PWM']].copy()
 
-# Update the data by race/ethnicity to match the formatting of the policy results
+# Pivot the data by race/ethnicity
 re_pwms = re_pwms.pivot_table(index='YEAR', values='PWM', columns='GROUP').reset_index()
 re_pwms.columns = re_pwms.columns.str.upper()
 
-# Update the data by policy for consistent formatting
-policy_pwms.columns = policy_pwms.columns.str.upper()
+# Update the policy data to just grab AB617 and SB535 and pivot
+policy_pwms = policy_pwms[policy_pwms['GROUP'].isin(['AB617','SB535'])].copy()
+policy_pwms = policy_pwms.pivot_table(index='YEAR', values='PWM', columns='GROUP').reset_index()
 
-# Combine both datasets
+# Combine both datasets and the total PWM
 pwms = pd.merge(re_pwms, policy_pwms, on='YEAR')
+pwms = pd.merge(pwms, total_pwm, on='YEAR')
 
 #%% Calculate absolute and relative disparity per group per year
 # Define the relevant groups
