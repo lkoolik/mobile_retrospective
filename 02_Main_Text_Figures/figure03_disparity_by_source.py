@@ -27,11 +27,11 @@ re_pwm_fp = '/Users/libbykoolik/Documents/Research/OEHHA Project/Retrospective A
 #%% Define Global Variables
 # Vehicle Color Palette
 vt_palette = cm.acton
-vt_colors = {'OTHER':(0.8,0.8,0.8), 
+vt_colors = {'OTH':(0.8,0.8,0.8), 
              'HDV':vt_palette(0.0), 
              'MDV':vt_palette(0.375), 
              'LDV':vt_palette(0.75)}
-vt_color_list = [vt_colors['OTHER'], vt_colors['HDV'], vt_colors['MDV'],
+vt_color_list = [vt_colors['OTH'], vt_colors['HDV'], vt_colors['MDV'],
                  vt_colors['LDV']] # list format will be usefull too
 
 # Define the years
@@ -45,16 +45,16 @@ re_pwm = pd.read_csv(re_pwm_fp)
 hispanic_pwm = re_pwm[re_pwm['GROUP']=='HISPANIC'].copy()
 
 # Remove unnecessary columns
-hispanic_pwm = hispanic_pwm[['YEAR','SOURCE','ABSOLUTE_DISP','RELATIVE_DISP']].copy()
+hispanic_pwm = hispanic_pwm[['YEAR','SOURCE','ABSOLUTE_DISP','RELATIVE_DISP']].copy().reset_index(drop=True)
 
 #%% Create a function for automating plotting the first two panels slightly
 def make_stackplot(years, pwm_data, ax, normalize=False, vt_color_list=vt_color_list):
     ''' '''
     # Create the vectors for each vehicle type
-    oth = pwm_data.loc[pwm_data['SOURCE']=='OTH','ABSOLUTE_DISP'].to_numpy()
-    mdv = pwm_data.loc[pwm_data['SOURCE']=='MDV','ABSOLUTE_DISP'].to_numpy()
-    ldv = pwm_data.loc[pwm_data['SOURCE']=='LDV','ABSOLUTE_DISP'].to_numpy()
-    hdv = pwm_data.loc[pwm_data['SOURCE']=='HDV','ABSOLUTE_DISP'].to_numpy()
+    oth = np.array(pwm_data.loc[pwm_data['SOURCE']=='OTH']['ABSOLUTE_DISP'])
+    mdv = np.array(pwm_data.loc[pwm_data['SOURCE']=='MDV']['ABSOLUTE_DISP'])
+    ldv = np.array(pwm_data.loc[pwm_data['SOURCE']=='LDV']['ABSOLUTE_DISP'])
+    hdv = np.array(pwm_data.loc[pwm_data['SOURCE']=='HDV']['ABSOLUTE_DISP'])
     
     # Normalize, if relevant by dividing by the total disparity 
     if normalize:
@@ -93,8 +93,8 @@ def make_stackplot(years, pwm_data, ax, normalize=False, vt_color_list=vt_color_
     
     return 
 
-#% Create the Figure
-fig, ax = plt.subplots(figsize=(4,8))
+#%% Create the Figure
+fig, ax = plt.subplots(figsize=(3.5,8))
 
 # Create three uneven panels for the plot
 gs = gridspec.GridSpec(3, 1, height_ratios=[4, 8, 8]) 
@@ -102,8 +102,30 @@ ax0 = plt.subplot(gs[0]) # a) Absolute disparity by source
 ax1 = plt.subplot(gs[1]) # b) Fractional disparity by source
 ax2 = plt.subplot(gs[2]) # c) Relative disparity by source
 
+# # # # # # # # # # # # 
+# Panels (A) and (B)  #
+# # # # # # # # # # # #
 # Plot panels A and B using the function defined above
 make_stackplot(years, hispanic_pwm, ax0, normalize=False)
 make_stackplot(years, hispanic_pwm, ax1, normalize=True)
 
+# # # # # # # # # # # #
+# Panel (C)           #
+# # # # # # # # # # # #
+# Plot panel C more manually
+sns.lineplot(data=hispanic_pwm[hispanic_pwm['SOURCE']!='ALL'], x='YEAR', 
+              y='RELATIVE_DISP', hue='SOURCE', palette=vt_colors, legend=False,
+              marker='o', ax=ax2)
 
+# Format the x-axis
+ax2.set_xlim([2000,2019])
+ax2.set_xticks(ticks=years, labels=['2000','','','','',
+                                    '2005','','','','',
+                                    '2010','','','','',
+                                    '2015','','','',''])
+ax2.set_xlabel('Year')
+
+# Format the y-axis
+ax2.set_yticks(ax2.get_yticks(), 
+               labels=['{:.0f}'.format(np.round(y*100,0)) for y in ax2.get_yticks()])
+ax2.set_ylabel('Relative Disparity from\nOn-Road Mobile Source (%)')
