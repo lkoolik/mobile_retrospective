@@ -20,7 +20,7 @@ import numpy as np  # v1.22.3
 from os import path 
 
 #%% Define Critical User Paths Up Front
-# Folder containing exposure shapefiles 
+# Folder containing exposure shapefiles (e.g., all_cy2000_exposure_concentrations.shp)
 main_data_path = '/Users/libbykoolik/Documents/Research/OEHHA Project/Retrospective Analysis/Final_Scripts/data_to_upload'
 
 # Folder to save the generated CSV files
