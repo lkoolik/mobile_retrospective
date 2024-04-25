@@ -21,10 +21,10 @@ from os import path
 
 #%% Define Critical User Paths Up Front
 # Folder containing exposure shapefiles (e.g., all_cy2000_exposure_concentrations.shp)
-main_data_path = '/Users/libbykoolik/Documents/Research/OEHHA Project/Retrospective Analysis/Final_Scripts/data_to_upload'
+main_data_path = '...' # add path
 
 # Folder to save the generated CSV files
-out_path = '/Users/libbykoolik/Documents/Research/OEHHA Project/Retrospective Analysis/Final_Scripts/processed_data'
+out_path = '...' # add path
 
 #%% Global definitions
 # Define the vehicle types run through ECHO-AIR

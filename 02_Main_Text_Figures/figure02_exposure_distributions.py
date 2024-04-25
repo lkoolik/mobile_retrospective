@@ -20,10 +20,10 @@ import numpy as np # v1.22.3
 
 #%% Define Critical User Paths Up Front
 # File path for the shapefile containing exposure to all vehicles for calendar year 2000
-data_2000_fp = '/Users/libbykoolik/Documents/Research/OEHHA Project/Retrospective Analysis/Tool Outputs/out_all_cy2000/shapes/all_cy2000_exposure_concentrations.shp'
+data_2000_fp = '.../all_cy2000_exposure_concentrations.shp' # add path
 
 # File path for the shapefile containing exposure to all vehicles for calendar year 2019
-data_2019_fp = '/Users/libbykoolik/Documents/Research/OEHHA Project/Retrospective Analysis/Tool Outputs/out_all_cy2019/shapes/all_cy2019_exposure_concentrations.shp'
+data_2019_fp = '.../all_cy2019_exposure_concentrations.shp' # add path
 
 #%% Define a few global variables
 # Define racial-ethnic groups

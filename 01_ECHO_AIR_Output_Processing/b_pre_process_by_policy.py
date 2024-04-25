@@ -24,19 +24,19 @@ import numpy as np  # v1.22.3
 from os import path 
 
 #%% Define Critical User Paths Up Front
-# Folder containing exposure shapefiles(e.g., all_cy2000_exposure_concentrations.shp)
-main_data_path = '/Users/libbykoolik/Documents/Research/OEHHA Project/Retrospective Analysis/Final_Scripts/data_to_upload'
+# Folder containing exposure shapefiles (e.g., all_cy2000_exposure_concentrations.shp)
+main_data_path = '...' # add path
 
 # Paths to necessary political boundaries
-ab617_fp = '/Users/libbykoolik/Documents/Research/OEHHA Project/data/CAPP Communities (dl 2023-09-01)/AB617_Shapes_Edited/ab617_communities.shp'
-sb535_fp = '/Users/libbykoolik/Documents/Research/OEHHA Project/data/AB617 and SB535 from Lucas (dl 2023-06-14)/SB535_TRACTS/SB635_tracts_gdf.shp'
-counties_fp = '/Users/libbykoolik/Documents/Research/OEHHA Project/scripts/echo-air/data/counties.feather'
+ab617_fp = '.../ab617_communities.shp' # add path
+sb535_fp = '.../SB635_tracts_gdf.shp' # add path
+counties_fp = '.../counties.feather' # add path (can be downloaded from the ECHO-AIR materials)
 
 # Path to raw population data (can be downloaded from the ECHO-AIR materials)
-pop_fp = '/Users/libbykoolik/Documents/Research/OEHHA Project/scripts/isrm_health_calculations/data/ca2010.feather'
+pop_fp = '.../ca2010.feather' # add path
 
 # Folder to save the generated CSV files
-out_path = '/Users/libbykoolik/Documents/Research/OEHHA Project/Retrospective Analysis/Final_Scripts/processed_data'
+out_path = '...' # add path
 
 #%% Global definitions
 # Define the vehicle types run through ECHO-AIR
